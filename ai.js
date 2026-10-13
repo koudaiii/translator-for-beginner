@@ -76,8 +76,11 @@ export function buildAoaiRequest(task, text, deployment) {
 export function parseAoaiResponse(json) {
   const choice = json && Array.isArray(json.choices) ? json.choices[0] : null;
   if (!choice || choice.finish_reason !== 'stop' || !choice.message) return { ok: false, error: READ_ERROR };
+  const { content } = choice.message;
+  if (typeof content !== 'string') return { ok: false, error: READ_ERROR };
   try {
-    return { ok: true, data: JSON.parse(choice.message.content) };
+    const data = JSON.parse(content);
+    return data && typeof data === 'object' ? { ok: true, data } : { ok: false, error: READ_ERROR };
   } catch {
     return { ok: false, error: READ_ERROR };
   }

@@ -168,3 +168,11 @@ test('runAiTask は不明な処理名を拒否する', async () => {
   assert.deepEqual(res, { ok: false, error: '不明な処理です' });
   assert.equal(calls.length, 0);
 });
+
+test('parseAoaiResponse は回答拒否や null の内容を失敗にする', () => {
+  const error = { ok: false, error: '結果を読み取れませんでした' };
+  assert.deepEqual(parseAoaiResponse(completion(null)), error);
+  assert.deepEqual(parseAoaiResponse(completion('null')), error);
+  assert.deepEqual(parseAoaiResponse(completion('"text"')), error);
+  assert.deepEqual(parseAoaiResponse({ choices: [{ finish_reason: 'stop', message: { content: null, refusal: 'I cannot help with that.' } }] }), error);
+});

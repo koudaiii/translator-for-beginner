@@ -161,3 +161,43 @@ test('同じ環境に 2 回注入してもエラーにならず、最初の定�
   vm.runInContext(code, context);
   assert.equal(context.Lesson, first);
 });
+
+import { installFakeDom } from './fake-dom.mjs';
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+test('AI の結果が壊れていてもそのブロックだけがメッセージになり、訳文は残る', () => {
+  const container = installFakeDom();
+  const view = Lesson.createLessonView(container);
+  view.translation({ ok: true, text: '訳文', detected: 'en' });
+  view.aiStarted();
+  view.ai('reading', { ok: true, data: null });
+  view.ai('variants', { ok: true, data: { chat: 'a', email: 'b', spoken: 'c', github: 'd' } });
+  const text = container.textContent;
+  assert.ok(text.includes('訳文'));
+  assert.ok(text.includes('結果を読み取れませんでした'));
+  assert.ok(text.includes('チャット'));
+});
+
+test('前の実行の aiStarted が、新しい実行の表示に混ざらない', () => {
+  const container = installFakeDom();
+  const first = Lesson.createLessonView(container);
+  container.replaceChildren();
+  const second = Lesson.createLessonView(container);
+  first.aiStarted();
+  second.aiStarted();
+  assert.equal(container.findAll('heading').length, 2);
+  assert.equal(container.children.length, 1);
+});
+
+test('clipboard がないページではコピーボタンが失敗を表示する', async () => {
+  const container = installFakeDom();
+  const view = Lesson.createLessonView(container);
+  view.aiStarted();
+  view.ai('variants', { ok: true, data: { chat: 'a', email: 'b', spoken: 'c', github: 'd' } });
+  const [button] = container.findAll('copy');
+  assert.equal(globalThis.navigator.clipboard, undefined);
+  assert.doesNotThrow(() => button.click());
+  await flush();
+  assert.equal(button.textContent, 'コピーできませんでした');
+});

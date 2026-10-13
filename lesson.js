@@ -113,7 +113,7 @@
     const button = el('button', 'copy', 'コピー');
     button.type = 'button';
     button.addEventListener('click', () => {
-      navigator.clipboard.writeText(text).then(
+      Promise.resolve().then(() => navigator.clipboard.writeText(text)).then(
         () => {
           button.textContent = 'コピーしました';
           setTimeout(() => { button.textContent = 'コピー'; }, 1500);
@@ -145,8 +145,11 @@
   };
 
   function createLessonView(container, onChange = () => {}) {
+    // 実行ごとに専用の root を持つ。container を空にされた古い実行は、切り離された root を更新するだけになる。
+    const root = el('div', 'lesson');
     const translation = el('div', 'section', '翻訳中…');
-    container.append(translation);
+    root.append(translation);
+    container.append(root);
     const blocks = {};
 
     function update(node, child) {
@@ -167,13 +170,18 @@
           blocks[task] = el('div', 'block', PLACEHOLDERS[task]);
           (task === 'reading' || task === 'grammar' ? explain : fix).append(blocks[task]);
         }
-        container.append(explain, fix);
+        root.append(explain, fix);
         onChange();
       },
       ai(task, res) {
-        const child = res.ok
-          ? RENDERERS[task](res.data)
-          : el('div', 'error', res.error || '結果を読み取れませんでした');
+        let child;
+        try {
+          child = res.ok
+            ? RENDERERS[task](res.data)
+            : el('div', 'error', res.error || '結果を読み取れませんでした');
+        } catch {
+          child = el('div', 'error', '結果を読み取れませんでした');
+        }
         update(blocks[task], child);
       },
     };
