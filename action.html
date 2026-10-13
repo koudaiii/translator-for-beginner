@@ -3,17 +3,20 @@
 <head>
   <meta charset="utf-8">
   <title>英文を日本語に翻訳</title>
+  <link rel="stylesheet" href="popup.css">
   <style>
-    body { font: 14px/1.6 system-ui, sans-serif; width: 320px; margin: 0; padding: 12px; }
+    body { font: 14px/1.6 system-ui, sans-serif; width: 360px; margin: 0; padding: 12px; }
     textarea { width: 100%; box-sizing: border-box; height: 90px; padding: 6px 8px; resize: vertical; }
-    button { margin-top: 8px; padding: 6px 16px; }
+    button#translate { margin-top: 8px; padding: 6px 16px; }
     #result { margin-top: 10px; white-space: pre-wrap; word-break: break-word; }
+    .error { color: #c62828; }
   </style>
 </head>
 <body>
   <textarea id="input" placeholder="英文を入力してください"></textarea>
   <button id="translate">翻訳</button>
   <div id="result"></div>
+  <script src="lesson.js"></script>
   <script src="action.js"></script>
 </body>
 </html>

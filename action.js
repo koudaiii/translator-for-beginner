@@ -3,23 +3,17 @@ const result = document.getElementById('result');
 
 async function translate() {
   const text = input.value.trim();
+  result.replaceChildren();
   if (!text) {
     result.textContent = 'テキストを入力してください';
     return;
   }
 
-  result.textContent = '翻訳中…';
+  const view = Lesson.createLessonView(result);
   try {
-    const res = await chrome.runtime.sendMessage({ type: 'translate', text });
-    if (!res || !res.ok) {
-      result.textContent = res && res.error ? res.error : '翻訳に失敗しました';
-    } else if (res.detected === 'ja') {
-      result.textContent = 'すでに日本語です';
-    } else {
-      result.textContent = res.text;
-    }
+    await Lesson.startLesson(text, (msg) => chrome.runtime.sendMessage(msg), view);
   } catch (e) {
-    result.textContent = `翻訳に失敗しました: ${e.message}`;
+    result.textContent = `表示に失敗しました: ${e.message}`;
   }
 }
 
