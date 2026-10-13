@@ -1,5 +1,8 @@
+import { AI_TASKS, isAiConfigured, runAiTask } from './ai.js';
+
 const MENU_ID = 'translate-selection';
 const ENDPOINT = 'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=ja';
+const AI_KEYS = ['aoaiEndpoint', 'aoaiKey', 'aoaiDeployment'];
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -14,7 +17,7 @@ async function run(tab) {
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ['content.js'],
+      files: ['lesson.js', 'content.js'],
     });
   } catch (e) {
     console.warn('このページには注入できません:', e.message);
@@ -56,11 +59,21 @@ async function translate(text) {
   };
 }
 
+function reply(promise, sendResponse) {
+  promise
+    .then(sendResponse)
+    .catch((e) => sendResponse({ ok: false, error: `通信に失敗しました: ${e.message}` }));
+  return true;
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg && msg.type === 'translate' && sender.id === chrome.runtime.id) {
-    translate(msg.text)
-      .then(sendResponse)
-      .catch((e) => sendResponse({ ok: false, error: `通信に失敗しました: ${e.message}` }));
-    return true;
+  if (!msg || sender.id !== chrome.runtime.id) return;
+  if (msg.type === 'translate') return reply(translate(msg.text), sendResponse);
+  if (msg.type === 'aiAvailable') {
+    return reply(chrome.storage.local.get(AI_KEYS).then(isAiConfigured), sendResponse);
+  }
+  if (Object.hasOwn(AI_TASKS, msg.type)) {
+    const text = typeof msg.text === 'string' ? msg.text : '';
+    return reply(chrome.storage.local.get(AI_KEYS).then((s) => runAiTask(msg.type, text, s)), sendResponse);
   }
 });

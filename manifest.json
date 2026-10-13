@@ -1,11 +1,14 @@
 {
   "manifest_version": 3,
   "name": "選択範囲を日本語に翻訳",
-  "version": "0.5.0",
-  "description": "選択したテキストを Azure Translator で日本語に翻訳して表示する",
+  "version": "0.6.0",
+  "description": "選択したテキストを Azure Translator で日本語に翻訳し、Azure OpenAI で文法解説と英文の添削を表示する",
   "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
-  "host_permissions": ["https://api.cognitive.microsofttranslator.com/*"],
-  "background": { "service_worker": "background.js" },
+  "host_permissions": [
+    "https://api.cognitive.microsofttranslator.com/*",
+    "https://*.openai.azure.com/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "action.html", "default_title": "英文を日本語に翻訳" },
   "options_ui": { "page": "options.html", "open_in_tab": true },
   "commands": {

@@ -5,6 +5,7 @@
   <title>選択範囲を日本語に翻訳 - 設定</title>
   <style>
     body { font: 14px/1.6 system-ui, sans-serif; max-width: 480px; margin: 32px auto; padding: 0 16px; }
+    h2 { margin-top: 32px; font-size: 1.1em; }
     label { display: block; margin-top: 16px; font-weight: 600; }
     input { width: 100%; box-sizing: border-box; padding: 6px 8px; margin-top: 4px; }
     button { margin-top: 20px; padding: 6px 16px; }
@@ -13,14 +14,27 @@
   </style>
 </head>
 <body>
-  <h1>Azure Translator の設定</h1>
+  <h1>設定</h1>
+  <h2>Azure Translator（翻訳）</h2>
   <label>キー
     <input id="key" type="password" autocomplete="off" placeholder="KEY 1 または KEY 2">
   </label>
   <label>リージョン <small>（Azure ポータルの「場所/リージョン」。例: japaneast。global の場合は空欄）</small>
     <input id="region" type="text" placeholder="japaneast">
   </label>
+
+  <h2>Azure OpenAI（解説・添削）</h2>
+  <label>エンドポイント <small>（例: https://translator-for-beginner-foundry.openai.azure.com）</small>
+    <input id="aoaiEndpoint" type="url" placeholder="https://<リソース名>.openai.azure.com">
+  </label>
+  <label>キー
+    <input id="aoaiKey" type="password" autocomplete="off" placeholder="KEY 1 または KEY 2">
+  </label>
+  <label>デプロイ名
+    <input id="aoaiDeployment" type="text" placeholder="gpt-6-luna">
+  </label>
+
   <button id="save">保存</button><span id="status"></span>
-  <script src="options.js"></script>
+  <script type="module" src="options.js"></script>
 </body>
 </html>
