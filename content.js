@@ -1,6 +1,5 @@
 (async () => {
   const HOST_ID = '__jp-translate-host__';
-  const TARGET = 'ja';
   const MAX_CHARS = 5000;
 
   document.getElementById(HOST_ID)?.remove();
@@ -66,17 +65,11 @@
     return;
   }
 
-  show('翻訳中…');
+  const view = Lesson.createLessonView(box, place);
+  place();
   try {
-    const res = await chrome.runtime.sendMessage({ type: 'translate', text });
-    if (!res || !res.ok) {
-      show(res && res.error ? res.error : '翻訳に失敗しました');
-    } else if (res.detected === TARGET) {
-      show('すでに日本語です');
-    } else {
-      show(res.text);
-    }
+    await Lesson.startLesson(text, (msg) => chrome.runtime.sendMessage(msg), view);
   } catch (e) {
-    show(`翻訳に失敗しました: ${e.message}`);
+    show(`表示に失敗しました: ${e.message}`);
   }
 })();
