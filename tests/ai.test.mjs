@@ -98,7 +98,7 @@ test('normalizeEndpoint は空白、末尾の /、/openai/v1 を取り除く', (
 });
 
 test('isValidEndpoint は https の openai.azure.com だけを受け付ける', () => {
-  assert.equal(isValidEndpoint('https://translator-for-beginner-foundry.openai.azure.com'), true);
+  assert.equal(isValidEndpoint('https://my-resource.openai.azure.com'), true);
   assert.equal(isValidEndpoint('https://x.cognitiveservices.azure.com'), false);
   assert.equal(isValidEndpoint('http://x.openai.azure.com'), false);
   assert.equal(isValidEndpoint('https://x.openai.azure.com/openai/v1'), false);
