@@ -8,7 +8,7 @@ pub enum InputError {
     #[error("テキストを入力してください")]
     Empty,
     #[error(
-        "英文を引数で渡すか、パイプで標準入力に渡してください（例: tfb fix I can not do it. / pbpaste | tfb fix）"
+        "英文を \"...\" で囲んで渡すか、パイプで標準入力に渡してください（例: tfb fix \"I can not do it.\" / pbpaste | tfb fix）"
     )]
     Terminal,
     #[error("入力が長すぎます ({0}文字、上限5000文字)")]
@@ -21,28 +21,28 @@ pub enum InputError {
     Read(String),
 }
 
-/// 引数があれば半角スペースでつなぎ、なければ標準入力を読む。前後の空白は取り除く。
+/// 引数があればそれを、なければ標準入力を読む。入力は 1 行として扱い、改行を含む空白の連続を半角スペース 1 つにまとめる。
 pub fn read_text(
-    args: &[String],
+    arg: Option<&str>,
     mut stdin: impl Read,
     stdin_is_terminal: bool,
 ) -> Result<String, InputError> {
-    let raw = if !args.is_empty() {
-        args.join(" ")
-    } else if stdin_is_terminal {
-        return Err(InputError::Terminal);
-    } else {
-        let mut buf = String::new();
-        stdin
-            .read_to_string(&mut buf)
-            .map_err(|e| InputError::Read(e.to_string()))?;
-        buf
+    let raw = match arg {
+        Some(arg) => arg.to_string(),
+        None if stdin_is_terminal => return Err(InputError::Terminal),
+        None => {
+            let mut buf = String::new();
+            stdin
+                .read_to_string(&mut buf)
+                .map_err(|e| InputError::Read(e.to_string()))?;
+            buf
+        }
     };
-    let text = raw.trim();
+    let text = raw.split_whitespace().collect::<Vec<_>>().join(" ");
     if text.is_empty() {
         Err(InputError::Empty)
     } else {
-        Ok(text.to_string())
+        Ok(text)
     }
 }
 
@@ -72,31 +72,45 @@ pub fn has_kana(text: &str) -> bool {
 mod tests {
     use super::*;
 
-    fn args(words: &[&str]) -> Vec<String> {
-        words.iter().map(|w| w.to_string()).collect()
-    }
-
     #[test]
-    fn joins_args_with_single_spaces_and_ignores_stdin() {
-        let text = read_text(
-            &args(&["I", "can", "not", "do", "it."]),
-            "ignored".as_bytes(),
-            false,
-        )
-        .unwrap();
+    fn uses_the_single_argument_and_ignores_stdin() {
+        let text = read_text(Some("I can not do it."), "ignored".as_bytes(), false).unwrap();
         assert_eq!(text, "I can not do it.");
     }
 
     #[test]
-    fn reads_stdin_when_no_args_and_trims() {
-        let text = read_text(&[], "  Hello, world.\n\n".as_bytes(), false).unwrap();
+    fn accepts_hyphen_leading_text() {
+        assert_eq!(
+            read_text(Some("-5 degrees is cold."), "".as_bytes(), true).unwrap(),
+            "-5 degrees is cold."
+        );
+    }
+
+    #[test]
+    fn reads_stdin_when_no_argument_and_trims() {
+        let text = read_text(None, "  Hello, world.\n\n".as_bytes(), false).unwrap();
         assert_eq!(text, "Hello, world.");
+    }
+
+    #[test]
+    fn joins_lines_and_collapses_whitespace() {
+        let text = read_text(
+            None,
+            "I can not\nreproduce   it\r\n\tin my local.\n".as_bytes(),
+            false,
+        )
+        .unwrap();
+        assert_eq!(text, "I can not reproduce it in my local.");
+        assert_eq!(
+            read_text(Some("Hello,\n  world."), "".as_bytes(), false).unwrap(),
+            "Hello, world."
+        );
     }
 
     #[test]
     fn refuses_to_wait_on_terminal_stdin() {
         assert_eq!(
-            read_text(&[], "".as_bytes(), true),
+            read_text(None, "".as_bytes(), true),
             Err(InputError::Terminal)
         );
     }
@@ -104,12 +118,20 @@ mod tests {
     #[test]
     fn rejects_blank_input() {
         assert_eq!(
-            read_text(&args(&["  "]), "".as_bytes(), false),
+            read_text(Some("  "), "".as_bytes(), false),
             Err(InputError::Empty)
         );
         assert_eq!(
-            read_text(&[], " \n".as_bytes(), false),
+            read_text(None, " \n".as_bytes(), false),
             Err(InputError::Empty)
+        );
+    }
+
+    #[test]
+    fn terminal_message_shows_quoted_example() {
+        assert_eq!(
+            InputError::Terminal.to_string(),
+            "英文を \"...\" で囲んで渡すか、パイプで標準入力に渡してください（例: tfb fix \"I can not do it.\" / pbpaste | tfb fix）"
         );
     }
 

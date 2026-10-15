@@ -97,7 +97,7 @@ async fn fix_prints_corrections_and_variants() {
     mock_task(&server, "corrections", completion(corrections())).await;
     mock_task(&server, "variants", completion(variants())).await;
     with_aoai(tfb(), &server)
-        .args(["fix", "I", "can", "not", "reproduce", "it."])
+        .args(["fix", "I can not reproduce it."])
         .assert()
         .success()
         .stdout(predicate::str::contains(
@@ -252,4 +252,61 @@ fn help_lists_user_facing_environment_variables() {
         assert!(help.contains(name), "{name} missing from --help:\n{help}");
     }
     assert!(!help.contains("TFB_TRANSLATOR_ENDPOINT"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn multiline_stdin_is_sent_as_one_line() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/openai/v1/chat/completions"))
+        .and(body_partial_json(json!({
+            "messages": [{ "role": "system" }, { "role": "user", "content": "I can not reproduce it in my local." }],
+            "response_format": { "json_schema": { "name": "variants" } },
+        })))
+        .respond_with(completion(variants()))
+        .expect(1)
+        .mount(&server)
+        .await;
+    mock_task(&server, "corrections", completion(corrections())).await;
+    with_aoai(tfb(), &server)
+        .args(["fix"])
+        .write_stdin("I can not\nreproduce it\nin my local.\n")
+        .assert()
+        .success();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn hyphen_leading_text_is_translated() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/translate"))
+        .and(body_partial_json(json!([{ "Text": "-5 degrees is cold." }])))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([{ "detectedLanguage": { "language": "en" }, "translations": [{ "text": "マイナス5度は寒い。" }] }])))
+        .expect(1)
+        .mount(&server)
+        .await;
+    with_translator(tfb(), &server)
+        .args(["translate", "-5 degrees is cold.", "--json"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn unquoted_words_get_a_quoting_hint() {
+    tfb()
+        .args(["fix", "I", "can", "not", "do", "it."])
+        .assert()
+        .code(2)
+        .stderr("tfb: 英文は \"...\" で囲んでください（例: tfb fix \"I can not do it.\"）\n");
+}
+
+#[test]
+fn help_shows_quoted_examples() {
+    tfb()
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "tfb fix \"I can not reproduce it in my local.\"",
+        ));
 }

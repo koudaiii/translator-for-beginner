@@ -6,6 +6,7 @@ mod render;
 mod tasks;
 mod translator;
 
+use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{Parser, Subcommand};
 use http::{CallError, Http};
 use render::JsonReport;
@@ -14,19 +15,26 @@ use std::io::IsTerminal;
 use std::process::ExitCode;
 use tasks::{Corrections, Grammar, Reading, Task, Variants};
 
-const ENV_HELP: &str = "環境変数:
+const AFTER_HELP: &str = "例:
+  tfb fix \"I can not reproduce it in my local.\"
+  tfb explain \"-5 degrees is too cold for me.\" --json
+  pbpaste | tfb translate
+
+環境変数:
   TFB_TRANSLATOR_KEY      Azure Translator のキー（translate で必須）
   TFB_TRANSLATOR_REGION   Azure Translator のリージョン（例: japaneast。リージョン付きのリソースでは必須）
   TFB_AOAI_ENDPOINT       Azure OpenAI のエンドポイント（explain / fix で必須。例: https://<リソース名>.openai.azure.com）
   TFB_AOAI_KEY            Azure OpenAI のキー（explain / fix で必須）
   TFB_AOAI_DEPLOYMENT     Azure OpenAI のデプロイ名（既定: gpt-6-luna）";
 
+const QUOTE_HINT: &str = "英文は \"...\" で囲んでください（例: tfb fix \"I can not do it.\"）";
+
 #[derive(Parser)]
 #[command(
     name = "tfb",
     version,
     about = "英文を翻訳・解説・添削する（Azure Translator / Azure OpenAI）",
-    after_help = ENV_HELP
+    after_help = AFTER_HELP
 )]
 struct Cli {
     #[command(subcommand)]
@@ -45,20 +53,34 @@ enum Command {
 
 #[derive(clap::Args)]
 struct Args {
-    /// 英文。省略すると標準入力から読む
-    text: Vec<String>,
+    /// 英文（"..." で囲む）。省略すると標準入力から読む
+    #[arg(allow_hyphen_values = true)]
+    text: Option<String>,
     /// 結果を JSON で出力する
     #[arg(long)]
     json: bool,
 }
 
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) if is_unquoted_text(&error) => return usage_error(QUOTE_HINT),
+        Err(error) => error.exit(),
+    };
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("tokio ランタイムを作成できませんでした");
     runtime.block_on(run(cli))
+}
+
+/// 引用符を付け忘れ、英文が複数の引数に分かれたときのエラーかどうか。
+fn is_unquoted_text(error: &clap::Error) -> bool {
+    error.kind() == ErrorKind::UnknownArgument
+        && matches!(
+            error.get(ContextKind::InvalidArg),
+            Some(ContextValue::String(arg)) if !arg.starts_with('-')
+        )
 }
 
 fn usage_error(error: impl Display) -> ExitCode {
@@ -78,7 +100,7 @@ async fn run(cli: Cli) -> ExitCode {
     let (Command::Translate(args) | Command::Explain(args) | Command::Fix(args)) = &cli.command;
     let stdin = std::io::stdin();
     let is_terminal = stdin.is_terminal();
-    let text = match input::read_text(&args.text, stdin.lock(), is_terminal) {
+    let text = match input::read_text(args.text.as_deref(), stdin.lock(), is_terminal) {
         Ok(text) => text,
         Err(error) => return usage_error(error),
     };
