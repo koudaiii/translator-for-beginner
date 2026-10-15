@@ -1,0 +1,3 @@
+mod input;
+
+fn main() {}
