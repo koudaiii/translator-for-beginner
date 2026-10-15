@@ -1,3 +1,4 @@
+mod aoai;
 mod config;
 mod http;
 mod input;
