@@ -14,11 +14,19 @@ use std::io::IsTerminal;
 use std::process::ExitCode;
 use tasks::{Corrections, Grammar, Reading, Task, Variants};
 
+const ENV_HELP: &str = "環境変数:
+  TFB_TRANSLATOR_KEY      Azure Translator のキー（translate で必須）
+  TFB_TRANSLATOR_REGION   Azure Translator のリージョン（例: japaneast。リージョン付きのリソースでは必須）
+  TFB_AOAI_ENDPOINT       Azure OpenAI のエンドポイント（explain / fix で必須。例: https://<リソース名>.openai.azure.com）
+  TFB_AOAI_KEY            Azure OpenAI のキー（explain / fix で必須）
+  TFB_AOAI_DEPLOYMENT     Azure OpenAI のデプロイ名（既定: gpt-6-luna）";
+
 #[derive(Parser)]
 #[command(
     name = "tfb",
     version,
-    about = "英文を翻訳・解説・添削する（Azure Translator / Azure OpenAI）"
+    about = "英文を翻訳・解説・添削する（Azure Translator / Azure OpenAI）",
+    after_help = ENV_HELP
 )]
 struct Cli {
     #[command(subcommand)]

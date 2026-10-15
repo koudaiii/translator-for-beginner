@@ -236,3 +236,20 @@ fn bad_arguments_exit_2() {
     tfb().args(["unknown"]).assert().code(2);
     tfb().assert().code(2);
 }
+
+#[test]
+fn help_lists_user_facing_environment_variables() {
+    let assert = tfb().arg("--help").assert().success();
+    let help = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    for name in [
+        "TFB_TRANSLATOR_KEY",
+        "TFB_TRANSLATOR_REGION",
+        "TFB_AOAI_ENDPOINT",
+        "TFB_AOAI_KEY",
+        "TFB_AOAI_DEPLOYMENT",
+        "gpt-6-luna",
+    ] {
+        assert!(help.contains(name), "{name} missing from --help:\n{help}");
+    }
+    assert!(!help.contains("TFB_TRANSLATOR_ENDPOINT"));
+}

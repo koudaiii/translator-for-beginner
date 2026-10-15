@@ -46,6 +46,21 @@ fn seconds(duration: Duration) -> String {
     }
 }
 
+/// reqwest のエラーに、原因（接続拒否、DNS、TLS など）を `: ` でつないで添える。
+fn describe(error: &dyn std::error::Error) -> String {
+    let mut message = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        let text = cause.to_string();
+        if !message.ends_with(&text) {
+            message.push_str(": ");
+            message.push_str(&text);
+        }
+        source = cause.source();
+    }
+    message
+}
+
 pub struct Http {
     client: reqwest::Client,
     timeout: Duration,
@@ -95,7 +110,7 @@ impl Http {
         if error.is_timeout() {
             CallError::Timeout(seconds(self.timeout))
         } else {
-            CallError::Network(error.without_url().to_string())
+            CallError::Network(describe(&error.without_url()))
         }
     }
 }
@@ -204,12 +219,26 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn connection_failure_is_network_error() {
+    async fn connection_failure_explains_the_cause() {
+        // 一度だけ使ったポートを閉じ、確実に接続を拒否されるアドレスを作る
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
         let err = Http::new(TIMEOUT)
-            .post_json("Test", "http://127.0.0.1:9/", &[], &json!({}))
+            .post_json(
+                "Test",
+                &format!("http://127.0.0.1:{port}/"),
+                &[],
+                &json!({}),
+            )
             .await
             .unwrap_err();
-        assert!(matches!(err, CallError::Network(_)), "{err:?}");
-        assert!(err.to_string().starts_with("通信に失敗しました: "));
+        let CallError::Network(message) = &err else {
+            panic!("{err:?}")
+        };
+        assert!(message.starts_with("error sending request: "), "{message}");
+        assert!(message.to_lowercase().contains("connect"), "{message}");
     }
 }
