@@ -44,13 +44,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Azure Translator で日本語に翻訳する
+    /// 日本語に翻訳する（例: tfb translate "I can not do it."）
     Translate(Args),
-    /// 直訳と単語、文法ポイントを表示する
+    /// 直訳と単語、文法ポイントを表示する（例: tfb explain "I can not do it."）
     Explain(Args),
-    /// 直した箇所と、用途別の言い回し（チャット、メール、対面・通話、GitHub）を表示する
+    /// 直した箇所と、用途別の言い回し（チャット、メール、対面・通話、GitHub）を表示する（例: tfb fix "I can not do it."）
     Fix(Args),
-    /// シェルの補完スクリプトを出力する（~/.zshrc に `source <(tfb completions zsh)` と書く）
+    /// シェルの補完スクリプトを出力する（例: tfb completions zsh。~/.zshrc に `source <(tfb completions zsh)` と書く）
     Completions {
         /// 補完スクリプトを作るシェル
         shell: CompletionShell,
