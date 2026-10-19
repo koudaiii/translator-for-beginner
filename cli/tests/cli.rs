@@ -87,7 +87,7 @@ async fn translate_json_reads_stdin() {
     let value: Value = serde_json::from_slice(&output).unwrap();
     assert_eq!(
         value,
-        json!({ "translation": { "text": "こんにちは。", "detected": "en" }, "errors": {} })
+        json!({ "translation": { "text": "こんにちは。", "detected": "en", "to": "ja" }, "errors": {} })
     );
 }
 
@@ -355,6 +355,54 @@ fn subcommand_descriptions_show_usage_examples() {
             "example for {example} missing"
         );
     }
-    assert!(script.contains("日本語に翻訳する"));
+    assert!(script.contains("日本語と英語を相互に翻訳する"));
     assert!(!script.contains("Azure Translator で日本語に翻訳する"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn translate_turns_japanese_into_english() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/translate"))
+        .and(wiremock::matchers::query_param("to", "en"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([{ "detectedLanguage": { "language": "ja" }, "translations": [{ "text": "I can't reproduce it locally.", "to": "en" }] }])))
+        .expect(1)
+        .mount(&server)
+        .await;
+    with_translator(tfb(), &server)
+        .args(["translate", "ローカルで再現できません"])
+        .assert()
+        .success()
+        .stdout("I can't reproduce it locally.\n");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn translate_retries_kanji_only_japanese_in_english() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/translate"))
+        .and(wiremock::matchers::query_param("to", "ja"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([{ "detectedLanguage": { "language": "ja" }, "translations": [{ "text": "東京大学", "to": "ja" }] }])))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/translate"))
+        .and(wiremock::matchers::query_param("to", "en"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([{ "detectedLanguage": { "language": "ja" }, "translations": [{ "text": "University of Tokyo", "to": "en" }] }])))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let output = with_translator(tfb(), &server)
+        .args(["translate", "--json", "東京大学"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let value: Value = serde_json::from_slice(&output).unwrap();
+    assert_eq!(
+        value["translation"],
+        json!({ "text": "University of Tokyo", "detected": "ja", "to": "en" })
+    );
 }

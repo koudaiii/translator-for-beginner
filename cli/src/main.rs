@@ -18,6 +18,7 @@ use tasks::{Corrections, Grammar, Reading, Task, Variants};
 const AFTER_HELP: &str = "例:
   tfb fix \"I can not reproduce it in my local.\"
   tfb explain \"-5 degrees is too cold for me.\" --json
+  tfb translate \"ローカルで再現できません\"   # 日本語は英語に翻訳する
   pbpaste | tfb translate
   source <(tfb completions zsh)   # ~/.zshrc に書くと Tab 補完が使える
 
@@ -44,7 +45,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// 日本語に翻訳する（例: tfb translate "I can not do it."）
+    /// 日本語と英語を相互に翻訳する（例: tfb translate "I can not do it." / tfb translate "再現できません"）
     Translate(Args),
     /// 直訳と単語、文法ポイントを表示する（例: tfb explain "I can not do it."）
     Explain(Args),
