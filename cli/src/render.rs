@@ -23,11 +23,7 @@ fn bold(text: &str) -> String {
 }
 
 pub fn translation_text(translation: &Translation) -> String {
-    if translation.detected.as_deref() == Some("ja") {
-        "すでに日本語です\n".to_string()
-    } else {
-        format!("{}\n", translation.text)
-    }
+    format!("{}\n", translation.text)
 }
 
 pub fn explain_text(reading: Option<&Reading>, grammar: Option<&Grammar>) -> String {
@@ -180,21 +176,19 @@ mod tests {
     }
 
     #[test]
-    fn translation_text_says_already_japanese() {
-        assert_eq!(
-            translation_text(&Translation {
-                text: "訳".into(),
-                detected: Some("en".into())
-            }),
-            "訳\n"
-        );
-        assert_eq!(
-            translation_text(&Translation {
-                text: "これ".into(),
-                detected: Some("ja".into())
-            }),
-            "すでに日本語です\n"
-        );
+    fn translation_text_prints_the_translation_in_either_direction() {
+        let to_japanese = Translation {
+            text: "訳".into(),
+            detected: Some("en".into()),
+            to: "ja".into(),
+        };
+        assert_eq!(translation_text(&to_japanese), "訳\n");
+        let to_english = Translation {
+            text: "University of Tokyo".into(),
+            detected: Some("ja".into()),
+            to: "en".into(),
+        };
+        assert_eq!(translation_text(&to_english), "University of Tokyo\n");
     }
 
     #[test]
