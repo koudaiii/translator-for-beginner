@@ -7,7 +7,7 @@ mod tasks;
 mod translator;
 
 use clap::error::{ContextKind, ContextValue, ErrorKind};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use http::{CallError, Http};
 use render::JsonReport;
 use std::fmt::Display;
@@ -19,6 +19,7 @@ const AFTER_HELP: &str = "例:
   tfb fix \"I can not reproduce it in my local.\"
   tfb explain \"-5 degrees is too cold for me.\" --json
   pbpaste | tfb translate
+  source <(tfb completions zsh)   # ~/.zshrc に書くと Tab 補完が使える
 
 環境変数:
   TFB_TRANSLATOR_KEY      Azure Translator のキー（translate で必須）
@@ -43,12 +44,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Azure Translator で日本語に翻訳する
+    /// 日本語に翻訳する（例: tfb translate "I can not do it."）
     Translate(Args),
-    /// 直訳と単語、文法ポイントを表示する
+    /// 直訳と単語、文法ポイントを表示する（例: tfb explain "I can not do it."）
     Explain(Args),
-    /// 直した箇所と、用途別の言い回し（チャット、メール、対面・通話、GitHub）を表示する
+    /// 直した箇所と、用途別の言い回し（チャット、メール、対面・通話、GitHub）を表示する（例: tfb fix "I can not do it."）
     Fix(Args),
+    /// シェルの補完スクリプトを出力する（例: tfb completions zsh。~/.zshrc に `source <(tfb completions zsh)` と書く）
+    Completions {
+        /// 補完スクリプトを作るシェル
+        shell: CompletionShell,
+    },
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum CompletionShell {
+    Zsh,
+}
+
+/// 英文を受け取って Azure を呼ぶサブコマンド。
+#[derive(Clone, Copy)]
+enum Lesson {
+    Translate,
+    Explain,
+    Fix,
 }
 
 #[derive(clap::Args)]
@@ -67,11 +86,27 @@ fn main() -> ExitCode {
         Err(error) if is_unquoted_text(&error) => return usage_error(QUOTE_HINT),
         Err(error) => error.exit(),
     };
+    let (lesson, args) = match cli.command {
+        Command::Translate(args) => (Lesson::Translate, args),
+        Command::Explain(args) => (Lesson::Explain, args),
+        Command::Fix(args) => (Lesson::Fix, args),
+        Command::Completions {
+            shell: CompletionShell::Zsh,
+        } => {
+            clap_complete::generate(
+                clap_complete::Shell::Zsh,
+                &mut Cli::command(),
+                "tfb",
+                &mut std::io::stdout(),
+            );
+            return ExitCode::SUCCESS;
+        }
+    };
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("tokio ランタイムを作成できませんでした");
-    runtime.block_on(run(cli))
+    runtime.block_on(run(lesson, args))
 }
 
 /// 引用符を付け忘れ、英文が複数の引数に分かれたときのエラーかどうか。
@@ -96,8 +131,7 @@ fn exit_code(all_ok: bool) -> ExitCode {
     }
 }
 
-async fn run(cli: Cli) -> ExitCode {
-    let (Command::Translate(args) | Command::Explain(args) | Command::Fix(args)) = &cli.command;
+async fn run(lesson: Lesson, args: Args) -> ExitCode {
     let stdin = std::io::stdin();
     let is_terminal = stdin.is_terminal();
     let text = match input::read_text(args.text.as_deref(), stdin.lock(), is_terminal) {
@@ -105,10 +139,10 @@ async fn run(cli: Cli) -> ExitCode {
         Err(error) => return usage_error(error),
     };
     let http = Http::new(http::TIMEOUT);
-    match &cli.command {
-        Command::Translate(args) => translate(&http, &text, args.json).await,
-        Command::Explain(args) => explain(&http, &text, args.json).await,
-        Command::Fix(args) => fix(&http, &text, args.json).await,
+    match lesson {
+        Lesson::Translate => translate(&http, &text, args.json).await,
+        Lesson::Explain => explain(&http, &text, args.json).await,
+        Lesson::Fix => fix(&http, &text, args.json).await,
     }
 }
 

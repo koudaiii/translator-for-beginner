@@ -1,6 +1,6 @@
 [package]
 name = "tfb"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.96"
 description = "英文を翻訳・解説・添削する CLI（Azure Translator / Azure OpenAI）"
@@ -10,6 +10,7 @@ publish = false
 anstream = "1"
 anstyle = "1"
 clap = { version = "4.6", features = ["derive"] }
+clap_complete = "4.6"
 reqwest = { version = "0.13", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

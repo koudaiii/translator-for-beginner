@@ -310,3 +310,51 @@ fn help_shows_quoted_examples() {
             "tfb fix \"I can not reproduce it in my local.\"",
         ));
 }
+
+#[test]
+fn completions_zsh_prints_a_script_for_every_subcommand() {
+    let assert = tfb().args(["completions", "zsh"]).assert().success();
+    let script = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    for needle in [
+        "#compdef tfb",
+        "translate",
+        "explain",
+        "fix",
+        "completions",
+        "--json",
+    ] {
+        assert!(
+            script.contains(needle),
+            "{needle} missing from zsh completion"
+        );
+    }
+}
+
+#[test]
+fn completions_accepts_only_zsh() {
+    tfb()
+        .args(["completions", "bash"])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'bash'"));
+}
+
+#[test]
+fn subcommand_descriptions_show_usage_examples() {
+    let assert = tfb().args(["completions", "zsh"]).assert().success();
+    let script = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    // zsh の補完スクリプトでは `:` が区切り文字なので、説明文中の `:` は `\:` にエスケープされる
+    for example in [
+        "tfb translate",
+        "tfb explain",
+        "tfb fix",
+        "tfb completions zsh",
+    ] {
+        assert!(
+            script.contains(&format!("例\\: {example}")),
+            "example for {example} missing"
+        );
+    }
+    assert!(script.contains("日本語に翻訳する"));
+    assert!(!script.contains("Azure Translator で日本語に翻訳する"));
+}
