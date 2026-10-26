@@ -34,7 +34,7 @@ pub fn explain_text(reading: Option<&Reading>, grammar: Option<&Grammar>) -> Str
             let lines: String = reading
                 .vocabulary
                 .iter()
-                .map(|v| format!("  {} — {}\n", v.term, v.meaning))
+                .map(|v| format!("  {} /{}/ {} — {}\n", v.term, v.ipa, v.katakana, v.meaning))
                 .collect();
             blocks.push(format!("{}{lines}", heading("単語・熟語")));
         }
@@ -197,12 +197,14 @@ mod tests {
             Some(&reading(vec![Vocabulary {
                 term: "reason".into(),
                 meaning: "理由".into(),
+                ipa: "ˈriːzən".into(),
+                katakana: "リーズン".into(),
             }])),
             Some(&grammar()),
         ));
         assert_eq!(
             text,
-            "■ 直訳\n私は / 知りたい\n\n■ 単語・熟語\n  reason — 理由\n\n■ 文法ポイント\n● cannot\n  1 語で書きます。\n    I cannot go.\n      行けません。\n    She cannot swim.\n      泳げません。\n"
+            "■ 直訳\n私は / 知りたい\n\n■ 単語・熟語\n  reason /ˈriːzən/ リーズン — 理由\n\n■ 文法ポイント\n● cannot\n  1 語で書きます。\n    I cannot go.\n      行けません。\n    She cannot swim.\n      泳げません。\n"
         );
     }
 
