@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-pub const READING_PROMPT: &str = "あなたは英語初心者の日本人に教える英語教師です。与えられた英文について、日本語で簡潔に解説してください。\n- literal: 英語の語順のまま、意味のまとまりごとに「 / 」で区切った日本語の直訳。英単語は書かない。例: 「私は / ずっと住んでいる / 東京に / 〜以来 / 私が / 卒業した / 大学を」\n- vocabulary: 初心者がつまずきそうな単語・熟語を最大5個。固有名詞や中学1年レベルの基本語は入れない。meaning は文中での意味。";
+pub const READING_PROMPT: &str = "あなたは英語初心者の日本人に教える英語教師です。与えられた英文について、日本語で簡潔に解説してください。\n- literal: 英語の語順のまま、意味のまとまりごとに「 / 」で区切った日本語の直訳。英単語は書かない。例: 「私は / ずっと住んでいる / 東京に / 〜以来 / 私が / 卒業した / 大学を」\n- vocabulary: 初心者がつまずきそうな単語・熟語を最大5個。固有名詞や中学1年レベルの基本語は入れない。meaning は文中での意味。ipa はアメリカ英語の発音記号（IPA。前後にスラッシュを付けない）、katakana は実際の音に近いカタカナ。熟語はつながる音も反映する。";
 pub const GRAMMAR_PROMPT: &str = "あなたは英語初心者の日本人に教える英語教師です。与えられた英文について、日本語で簡潔に解説してください。\n- grammar: 文中の重要な文法項目を1〜3個。point は項目名、explanation は2〜3文の説明、examples には同じ文法を使った短い英文（en）と和訳（ja）を必ず2つ入れる。空にしない。";
 pub const CORRECTIONS_PROMPT: &str = "あなたは英語初心者の日本人が書いた英文を直す英語の編集者です。入力の英文の文法・語法の誤りを1つずつ挙げる。before は元の表現、after は直した表現、reason は初心者向けの短い日本語の理由。誤りがなければ空配列にする（言い回しの好みは誤りに含めない）。";
 pub const VARIANTS_PROMPT: &str = "あなたは英語初心者の日本人が書いた英文を直す英語の編集者です。入力の英文の文法・語法の誤りを直し、意味を変えずに、次の4つの用途に合う英文をそれぞれ1つ書いてください。用途ごとに語調・長さ・言い回しをはっきり変え、同じ文を繰り返さない。情報を足したり削ったりしない。\n- chat: Slack や Teams のチャット。短く、フレンドリーな口語。短縮形を使い、文を削ってよい（例: \"Checked your PR — looks good!\"）。挨拶や署名は付けない。\n- email: 仕事のメール本文。完全な文で丁寧に。短縮形を避け、丁寧な定型表現を使う（例: \"I apologize for the delayed response.\"）。入力に挨拶や署名がなければ付けない。\n- spoken: 対面や通話で口に出して言う英語。言いやすい短い文に分け、自然なつなぎ言葉を使う（例: \"So, ...\", \"Actually, ...\"）。\n- github: Issue や Pull Request のコメント。簡潔で明確、中立的な技術文。開発者の慣用表現を使ってよい（例: LGTM, repro）。コード・ファイル名・コマンドはバッククォートで囲む。";
@@ -59,7 +59,12 @@ impl Task {
                 (
                     "vocabulary",
                     array(
-                        object(&[("term", string.clone()), ("meaning", string)]),
+                        object(&[
+                            ("term", string.clone()),
+                            ("meaning", string.clone()),
+                            ("ipa", string.clone()),
+                            ("katakana", string),
+                        ]),
                         None,
                         Some(5),
                     ),
@@ -136,6 +141,8 @@ pub struct Reading {
 pub struct Vocabulary {
     pub term: String,
     pub meaning: String,
+    pub ipa: String,
+    pub katakana: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -242,6 +249,16 @@ mod tests {
     }
 
     #[test]
+    fn vocabulary_requires_pronunciation() {
+        let item = &Task::Reading.schema()["properties"]["vocabulary"]["items"];
+        assert_eq!(
+            item["required"],
+            json!(["term", "meaning", "ipa", "katakana"])
+        );
+        assert!(READING_PROMPT.contains("ipa はアメリカ英語の発音記号"));
+    }
+
+    #[test]
     fn explain_tasks_prefix_user_content() {
         assert_eq!(Task::Reading.user_content("Hi."), "英文: Hi.");
         assert_eq!(Task::Grammar.user_content("Hi."), "英文: Hi.");
@@ -252,7 +269,7 @@ mod tests {
     #[test]
     fn result_types_match_their_schemas() {
         let reading: Reading = serde_json::from_value(
-            json!({"literal": "x", "vocabulary": [{"term": "a", "meaning": "b"}]}),
+            json!({"literal": "x", "vocabulary": [{"term": "a", "meaning": "b", "ipa": "eɪ", "katakana": "エイ"}]}),
         )
         .unwrap();
         assert_eq!(reading.vocabulary[0].term, "a");

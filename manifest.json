@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "選択範囲を日本語に翻訳",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "選択したテキストを Azure Translator で日本語に翻訳し、Azure OpenAI で文法解説と英文の添削を表示する",
   "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
   "host_permissions": [

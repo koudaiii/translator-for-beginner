@@ -68,7 +68,7 @@
       const list = el('ul', 'vocab');
       for (const v of data.vocabulary) {
         const item = el('li');
-        item.append(el('span', 'term', v.term), ` — ${v.meaning}`);
+        item.append(el('span', 'term', v.term), ` /${v.ipa}/ ${v.katakana} — ${v.meaning}`);
         list.append(item);
       }
       frag.append(el('div', 'label', '単語・熟語'), list);

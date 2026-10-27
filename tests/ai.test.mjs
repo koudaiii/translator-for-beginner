@@ -176,3 +176,11 @@ test('parseAoaiResponse は回答拒否や null の内容を失敗にする', ()
   assert.deepEqual(parseAoaiResponse(completion('"text"')), error);
   assert.deepEqual(parseAoaiResponse({ choices: [{ finish_reason: 'stop', message: { content: null, refusal: 'I cannot help with that.' } }] }), error);
 });
+
+test('reading の単語・熟語は発音記号とカタカナを必ず含む', () => {
+  const item = AI_TASKS.reading.schema.properties.vocabulary.items;
+  assert.deepEqual(Object.keys(item.properties), ['term', 'meaning', 'ipa', 'katakana']);
+  assert.deepEqual(item.required, ['term', 'meaning', 'ipa', 'katakana']);
+  assert.match(AI_TASKS.reading.system, /ipa はアメリカ英語の発音記号/);
+  assert.match(AI_TASKS.reading.system, /katakana は実際の音に近いカタカナ/);
+});

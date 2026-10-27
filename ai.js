@@ -21,11 +21,11 @@ export const AI_TASKS = {
   reading: {
     system: TEACHER
       + '- literal: 英語の語順のまま、意味のまとまりごとに「 / 」で区切った日本語の直訳。英単語は書かない。例: 「私は / ずっと住んでいる / 東京に / 〜以来 / 私が / 卒業した / 大学を」\n'
-      + '- vocabulary: 初心者がつまずきそうな単語・熟語を最大5個。固有名詞や中学1年レベルの基本語は入れない。meaning は文中での意味。',
+      + '- vocabulary: 初心者がつまずきそうな単語・熟語を最大5個。固有名詞や中学1年レベルの基本語は入れない。meaning は文中での意味。ipa はアメリカ英語の発音記号（IPA。前後にスラッシュを付けない）、katakana は実際の音に近いカタカナ。熟語はつながる音も反映する。',
     user: (text) => `英文: ${text}`,
     schema: obj({
       literal: str,
-      vocabulary: list(obj({ term: str, meaning: str }), { maxItems: 5 }),
+      vocabulary: list(obj({ term: str, meaning: str, ipa: str, katakana: str }), { maxItems: 5 }),
     }),
   },
   grammar: {

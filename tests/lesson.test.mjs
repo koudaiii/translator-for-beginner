@@ -201,3 +201,14 @@ test('clipboard がないページではコピーボタンが失敗を表示す�
   await flush();
   assert.equal(button.textContent, 'コピーできませんでした');
 });
+
+test('単語・熟語に発音記号とカタカナを並べて表示する', () => {
+  const container = installFakeDom();
+  const view = Lesson.createLessonView(container);
+  view.aiStarted();
+  view.ai('reading', {
+    ok: true,
+    data: { literal: '私は / 再現できない', vocabulary: [{ term: 'reproduce', meaning: '再現する', ipa: 'ˌriːprəˈduːs', katakana: 'リープラドゥース' }] },
+  });
+  assert.ok(container.textContent.includes('reproduce /ˌriːprəˈduːs/ リープラドゥース — 再現する'), container.textContent);
+});

@@ -47,7 +47,7 @@ struct Cli {
 enum Command {
     /// 日本語と英語を相互に翻訳する（例: tfb translate "I can not do it." / tfb translate "再現できません"）
     Translate(Args),
-    /// 直訳と単語、文法ポイントを表示する（例: tfb explain "I can not do it."）
+    /// 直訳、発音付きの単語、文法ポイントを表示する（例: tfb explain "I can not do it."）
     Explain(Args),
     /// 直した箇所と、用途別の言い回し（チャット、メール、対面・通話、GitHub）を表示する（例: tfb fix "I can not do it."）
     Fix(Args),
