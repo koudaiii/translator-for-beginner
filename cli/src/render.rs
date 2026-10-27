@@ -52,13 +52,25 @@ pub fn explain_text(reading: Option<&Reading>, grammar: Option<&Grammar>) -> Str
                 format!(
                     "{}\n  {}\n{examples}",
                     bold(&format!("● {}", g.point)),
-                    g.explanation
+                    without_leaked_examples(&g.explanation)
                 )
             })
             .collect();
         blocks.push(format!("{}{}", heading("文法ポイント"), points.join("\n")));
     }
     blocks.join("\n")
+}
+
+// モデルが explanation の末尾に examples の JSON を書き足すことがあるので、そこから先を落とす
+fn without_leaked_examples(explanation: &str) -> &str {
+    let lower = explanation.to_ascii_lowercase();
+    let cut = lower.match_indices("examples").find_map(|(i, word)| {
+        lower[i + word.len()..]
+            .trim_start()
+            .starts_with(':')
+            .then_some(i)
+    });
+    cut.map_or(explanation, |i| explanation[..i].trim_end())
 }
 
 pub fn fix_text(corrections: Option<&Corrections>, variants: Option<&Variants>) -> String {
@@ -206,6 +218,16 @@ mod tests {
             text,
             "■ 直訳\n私は / 知りたい\n\n■ 単語・熟語\n  reason /ˈriːzən/ リーズン — 理由\n\n■ 文法ポイント\n● cannot\n  1 語で書きます。\n    I cannot go.\n      行けません。\n    She cannot swim.\n      泳げません。\n"
         );
+    }
+
+    #[test]
+    fn explain_text_drops_examples_leaked_into_the_explanation() {
+        let mut leaked = grammar();
+        leaked.grammar[0].explanation =
+            "1 語で書きます。 examples: [{\"en\":\"I cannot go.\",\"ja\":\"行けません。\"}]".into();
+        let text = plain(&explain_text(None, Some(&leaked)));
+        assert!(text.contains("  1 語で書きます。\n"), "{text}");
+        assert!(!text.contains("examples:"), "{text}");
     }
 
     #[test]

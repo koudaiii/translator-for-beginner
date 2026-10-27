@@ -81,7 +81,8 @@
     frag.append(el('div', 'label', '文法ポイント'));
     for (const g of data.grammar) {
       const item = el('div', 'point');
-      item.append(el('div', 'point-title', g.point), el('div', null, g.explanation));
+      // モデルが explanation の末尾に examples の JSON を書き足すことがあるので、そこから先を落とす
+      item.append(el('div', 'point-title', g.point), el('div', null, g.explanation.replace(/\s*examples\s*:[\s\S]*$/i, '')));
       for (const ex of g.examples) {
         const example = el('div', 'example');
         example.append(el('div', 'en', ex.en), el('div', 'ja', ex.ja));

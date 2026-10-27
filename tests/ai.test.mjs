@@ -59,6 +59,10 @@ test('件数の制約がスキーマに入っている', () => {
   assert.deepEqual(Object.keys(AI_TASKS.variants.schema.properties), ['chat', 'email', 'spoken', 'github']);
 });
 
+test('文法の explanation に例文を書かせない', () => {
+  assert.match(AI_TASKS.grammar.system, /explanation には例文や examples を書かない/);
+});
+
 test('buildAoaiRequest がモデル、推論レベル、スキーマ、入力を組み立てる', () => {
   const body = buildAoaiRequest('variants', 'I can not do it.', 'gpt-6-luna');
   assert.equal(body.model, 'gpt-6-luna');
