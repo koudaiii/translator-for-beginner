@@ -212,3 +212,21 @@ test('単語・熟語に発音記号とカタカナを並べて表示する', ()
   });
   assert.ok(container.textContent.includes('reproduce /ˌriːprəˈduːs/ リープラドゥース — 再現する'), container.textContent);
 });
+
+test('文法の説明に紛れ込んだ examples の JSON は表示しない', () => {
+  const container = installFakeDom();
+  const view = Lesson.createLessonView(container);
+  view.aiStarted();
+  view.ai('grammar', {
+    ok: true,
+    data: {
+      grammar: [{
+        point: '命令文',
+        explanation: '動詞の原形から始めます。examples: [{"en":"Choose one task.","ja":"仕事を一つ選んでください。"}]',
+        examples: [{ en: 'Choose one task.', ja: '仕事を一つ選んでください。' }, { en: 'Check the result.', ja: '結果を確認してください。' }],
+      }],
+    },
+  });
+  assert.ok(container.textContent.includes('動詞の原形から始めます。'), container.textContent);
+  assert.ok(!container.textContent.includes('examples:'), container.textContent);
+});

@@ -30,7 +30,7 @@ export const AI_TASKS = {
   },
   grammar: {
     system: TEACHER
-      + '- grammar: 文中の重要な文法項目を1〜3個。point は項目名、explanation は2〜3文の説明、examples には同じ文法を使った短い英文（en）と和訳（ja）を必ず2つ入れる。空にしない。',
+      + '- grammar: 文中の重要な文法項目を1〜3個。point は項目名、explanation は2〜3文の説明（explanation には例文や examples を書かない）、examples には同じ文法を使った短い英文（en）と和訳（ja）を必ず2つ入れる。空にしない。',
     user: (text) => `英文: ${text}`,
     schema: obj({
       grammar: list(obj({
